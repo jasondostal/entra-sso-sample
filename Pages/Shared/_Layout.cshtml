@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Entra SSO Sample</title>
+    <title>@ViewData["Title"] - Entra EasyAuth Sample</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: .75rem; }
@@ -16,17 +16,10 @@
 </head>
 <body>
     <header>
-        <strong>Entra SSO Sample</strong>
+        <strong>Entra EasyAuth Sample</strong>
         <nav>
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <span>Signed in as <strong>@User.Identity.Name</strong></span>
-                <a class="btn" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignOut">Sign out</a>
-            }
-            else
-            {
-                <a class="btn" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignIn">Sign in</a>
-            }
+            @* EasyAuth exposes built-in sign-in/out endpoints — no app code or routes needed. *@
+            <a class="btn" href="/.auth/logout?post_logout_redirect_uri=/">Sign out</a>
         </nav>
     </header>
     <main>

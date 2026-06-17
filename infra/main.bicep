@@ -1,21 +1,21 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// App Service for the IN-APP auth variant (Microsoft.Identity.Web).
+// App Service behind Entra SSO via App Service EasyAuth (authsettingsV2).
 //
-// Auth lives in the app's code, so the infra's only job is to run the app and
-// hand it the AzureAd config as app settings. No special auth resource needed —
-// contrast with easyauth.bicep, which moves sign-in to the platform layer.
+// One deploy gives you a sign-in-protected app with NO auth code: the App Service
+// plan, the Linux .NET web app, the EasyAuth/Entra configuration, and the
+// client-secret app setting that config references.
 //
 // The Entra app registration is created out-of-band (see create-app-registration.sh)
-// because Bicep cannot create app regs. Pass the resulting IDs in as params.
+// because Bicep has no Microsoft.Graph provider. Pass the IDs + secret in:
 //
 //   az deployment group create -g <rg> -f main.bicep -p main.bicepparam \
-//     -p clientSecret=$(az keyvault secret show --vault-name <kv> -n entra-sample-secret --query value -o tsv)
+//     -p clientSecret=$(az keyvault secret show --vault-name <kv> -n easyauth-secret --query value -o tsv)
 // ─────────────────────────────────────────────────────────────────────────────
 
 @description('Azure region.')
 param location string = resourceGroup().location
 
-@description('Base name for the App Service plan + web app (the web app name must be globally unique).')
+@description('Globally-unique web app name.')
 param appName string
 
 @description('Entra directory (tenant) ID — from create-app-registration.sh.')
@@ -24,12 +24,12 @@ param tenantId string
 @description('Entra application (client) ID — from create-app-registration.sh.')
 param clientId string
 
-@description('Client secret. Inject from Key Vault at deploy time; never hardcode.')
+@description('Client secret for EasyAuth. Inject from Key Vault at deploy; never hardcode.')
 @secure()
 param clientSecret string
 
-@description('App Service plan SKU.')
-param sku string = 'B1'
+@description('App Service plan SKU (F1 = free).')
+param sku string = 'F1'
 
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: '${appName}-plan'
@@ -54,23 +54,57 @@ resource site 'Microsoft.Web/sites@2023-12-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       appSettings: [
-        // These map to the "AzureAd" config section the app reads
-        // (double-underscore = config nesting in .NET).
-        { name: 'AzureAd__Instance', value: 'https://login.microsoftonline.com/' }
-        { name: 'AzureAd__TenantId', value: tenantId }
-        { name: 'AzureAd__ClientId', value: clientId }
-        // In production prefer a Key Vault reference instead of the raw value:
-        //   value: '@Microsoft.KeyVault(SecretUri=https://<kv>.vault.azure.net/secrets/entra-sample-secret/)'
-        { name: 'AzureAd__ClientSecret', value: clientSecret }
-        { name: 'AzureAd__CallbackPath', value: '/signin-oidc' }
-        { name: 'AzureAd__SignedOutCallbackPath', value: '/signout-callback-oidc' }
+        // EasyAuth reads the client secret from this app setting (referenced by
+        // name in authsettingsV2 below — never inline). In prod use a KV reference:
+        //   value: '@Microsoft.KeyVault(SecretUri=https://<kv>.vault.azure.net/secrets/easyauth-secret/)'
+        {
+          name: 'MICROSOFT_PROVIDER_AUTHENTICATION_SECRET'
+          value: clientSecret
+        }
       ]
     }
   }
 }
 
+// The auth layer. requireAuthentication + RedirectToLoginPage means every request
+// is bounced to Entra sign-in before it ever reaches the app.
+resource auth 'Microsoft.Web/sites/config@2023-12-01' = {
+  parent: site
+  name: 'authsettingsV2'
+  properties: {
+    platform: {
+      enabled: true
+    }
+    globalValidation: {
+      requireAuthentication: true
+      unauthenticatedClientAction: 'RedirectToLoginPage'
+      redirectToProvider: 'azureactivedirectory'
+    }
+    identityProviders: {
+      azureActiveDirectory: {
+        enabled: true
+        registration: {
+          openIdIssuer: 'https://login.microsoftonline.com/${tenantId}/v2.0'
+          clientId: clientId
+          clientSecretSettingName: 'MICROSOFT_PROVIDER_AUTHENTICATION_SECRET'
+        }
+        validation: {
+          allowedAudiences: [
+            'api://${clientId}'
+          ]
+        }
+      }
+    }
+    login: {
+      tokenStore: {
+        enabled: true
+      }
+    }
+  }
+}
+
 @description('Register this exact redirect URI on the app registration.')
-output redirectUri string = 'https://${site.properties.defaultHostName}/signin-oidc'
+output redirectUri string = 'https://${site.properties.defaultHostName}/.auth/login/aad/callback'
 
 @description('Browse here after deploy.')
 output appUrl string = 'https://${site.properties.defaultHostName}'

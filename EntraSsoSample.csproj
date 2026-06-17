@@ -4,12 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>entra-sso-sample</UserSecretsId>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Identity.Web" Version="4.10.0" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.10.0" />
-  </ItemGroup>
+  <!-- No auth packages: sign-in is handled by App Service EasyAuth, not the app. -->
 
 </Project>

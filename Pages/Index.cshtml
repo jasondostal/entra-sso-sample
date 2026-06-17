@@ -4,24 +4,39 @@
     ViewData["Title"] = "Home";
 }
 
-<h1>You're signed in via Entra 🎉</h1>
+<h1>Signed in via App Service EasyAuth 🎉</h1>
 <p>
-    Because <code>FallbackPolicy</code> requires an authenticated user, just reaching
-    this page means the OpenID Connect sign-in round-trip to Entra succeeded.
-    Below are the claims from your ID token.
+    This app has <strong>no authentication code</strong>. App Service runs the Entra
+    sign-in <em>in front of</em> it and forwards your identity as
+    <code>X-MS-CLIENT-PRINCIPAL-*</code> headers, shown below.
 </p>
 
-<table>
-    <thead>
-        <tr><th>Claim type</th><th>Value</th></tr>
-    </thead>
-    <tbody>
-        @foreach (var claim in User.Claims)
-        {
-            <tr>
-                <td><code>@claim.Type</code></td>
-                <td>@claim.Value</td>
-            </tr>
-        }
-    </tbody>
-</table>
+@if (Model.HasPrincipal)
+{
+    <ul>
+        <li><strong>Name:</strong> @Model.Name</li>
+        <li><strong>Identity provider:</strong> @Model.Idp</li>
+        <li><strong>Object ID:</strong> @Model.PrincipalId</li>
+    </ul>
+
+    <h2>Claims <small>(decoded from <code>X-MS-CLIENT-PRINCIPAL</code>)</small></h2>
+    <table>
+        <thead>
+            <tr><th>Claim type</th><th>Value</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var c in Model.Claims)
+            {
+                <tr><td><code>@c.Type</code></td><td>@c.Value</td></tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>
+        <em>No EasyAuth headers found — you're running locally, without the platform
+        auth layer. Deploy behind App Service EasyAuth (see the README) to see your
+        identity populate here.</em>
+    </p>
+}

@@ -22,6 +22,8 @@ builder.Services.AddRazorPages().AddMicrosoftIdentityUI();                  // a
 
 ## 1. Register the app in Entra
 
+> 📖 Full click-through walkthrough (with troubleshooting): [`docs/ENTRA-SETUP.md`](docs/ENTRA-SETUP.md). Quick version below.
+
 Entra ID → **App registrations** → **New registration**:
 
 - **Supported account types:** *Accounts in this organizational directory only* (single-tenant).

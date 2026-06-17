@@ -1,0 +1,27 @@
+@page
+@model EntraSsoSample.Pages.IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<h1>You're signed in via Entra 🎉</h1>
+<p>
+    Because <code>FallbackPolicy</code> requires an authenticated user, just reaching
+    this page means the OpenID Connect sign-in round-trip to Entra succeeded.
+    Below are the claims from your ID token.
+</p>
+
+<table>
+    <thead>
+        <tr><th>Claim type</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var claim in User.Claims)
+        {
+            <tr>
+                <td><code>@claim.Type</code></td>
+                <td>@claim.Value</td>
+            </tr>
+        }
+    </tbody>
+</table>

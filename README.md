@@ -54,6 +54,15 @@ dotnet run
 
 Browse to the HTTPS URL it prints → you'll be redirected to Entra to sign in → back to the home page, which lists your claims. Sign out with the header link.
 
+## Infrastructure-as-code
+
+The [`infra/`](infra/) folder has matching IaC samples:
+- `create-app-registration.sh` — the Entra app registration + redirect URIs + secret (an `az` script, because **Bicep can't create app registrations**).
+- `main.bicep` — App Service for **this** in-app auth approach (wires the `AzureAd__*` app settings).
+- `easyauth.bicep` — the **EasyAuth** alternative (`authsettingsV2`, no app code).
+
+All Bicep validated with `az bicep build`. See [`infra/README.md`](infra/README.md).
+
 ## Notes
 
 - **MVC instead of Razor Pages:** swap `AddRazorPages().AddMicrosoftIdentityUI()` for `AddControllersWithViews().AddMicrosoftIdentityUI()` and map controller routes. Everything else is identical.

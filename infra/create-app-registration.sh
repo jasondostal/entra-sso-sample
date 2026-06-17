@@ -28,6 +28,9 @@ REDIRECTS=(
 )
 
 echo ">> Creating app registration: ${DISPLAY_NAME}"
+# --enable-id-token-issuance: sign-in-only via Microsoft.Identity.Web uses the
+# OIDC hybrid flow (response_type=id_token), so Entra must be allowed to issue
+# ID tokens. (Not needed once you switch to code flow for downstream-API tokens.)
 APP_ID=$(az ad app create \
   --display-name "${DISPLAY_NAME}" \
   --sign-in-audience AzureADMyOrg \

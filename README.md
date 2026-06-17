@@ -1,6 +1,8 @@
 # entra-sso-sample
 
-A minimal, runnable example of **Microsoft Entra ID single sign-on in an ASP.NET Core web app** — the in-app `Microsoft.Identity.Web` approach (OpenID Connect, auth-code flow + PKCE). Built to *show* the pattern: the entire auth wiring is three registrations in `Program.cs`, and the home page prints your ID-token claims once you're signed in.
+A minimal, runnable example of **Microsoft Entra ID single sign-on in an ASP.NET Core web app** — the in-app `Microsoft.Identity.Web` approach (OpenID Connect). Built to *show* the pattern: the entire auth wiring is three registrations in `Program.cs`, and the home page prints your ID-token claims once you're signed in.
+
+> Sign-in-only via `Microsoft.Identity.Web` uses the OpenID Connect **hybrid ID-token flow** (`response_type=id_token`, form_post) — so the app registration must have **ID tokens** enabled (see the walkthrough). Auth-code flow + PKCE comes into play when you additionally acquire tokens for downstream APIs.
 
 > This is the **code-level** SSO pattern. The no-code alternative is App Service **EasyAuth**, which puts sign-in in front of the app at the platform layer with no app changes.
 
@@ -31,7 +33,7 @@ Entra ID → **App registrations** → **New registration**:
 - After creating, copy the **Application (client) ID** and **Directory (tenant) ID**.
 - **Certificates & secrets** → **New client secret** → copy the value.
 
-In the **Authentication** blade, also register the sign-out URL (Front-channel logout): `https://localhost:5001/signout-callback-oidc`. With auth-code + PKCE you do **not** need to tick the implicit-flow "ID tokens" box.
+In the **Authentication** blade, also register the sign-out URL (Front-channel logout): `https://localhost:5001/signout-callback-oidc`, and under **Implicit grant and hybrid flows** tick **ID tokens** (sign-in-only uses the hybrid ID-token flow). Leave **Access tokens** unticked.
 
 | Purpose | Redirect URI | Config key |
 |---|---|---|

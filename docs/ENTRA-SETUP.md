@@ -56,10 +56,12 @@ Add one entry per environment, e.g.:
 Also set **Front-channel logout URL** → `https://<host>/signout-callback-oidc`
 so sign-out completes cleanly.
 
-> **Implicit grant:** leave the "Access tokens" and "ID tokens" checkboxes
-> **unticked**. Those are for the legacy implicit flow. `Microsoft.Identity.Web`
-> uses authorization-code flow with PKCE, which doesn't need them. (Older tutorials
-> say to tick "ID tokens" — ignore that.)
+> **Implicit grant and hybrid flows:** tick **ID tokens**, leave **Access tokens**
+> unticked. For *sign-in only*, `Microsoft.Identity.Web` uses the OpenID Connect
+> hybrid flow (`response_type=id_token` returned via `form_post`), so Entra must be
+> allowed to issue ID tokens. (You only move to pure authorization-code flow + PKCE
+> when you also acquire access tokens for downstream APIs — then this box isn't
+> needed.) The CLI script sets this with `--enable-id-token-issuance true`.
 
 ## 4. Client secret
 

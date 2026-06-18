@@ -1,0 +1,46 @@
+@page
+@model EntraSsoSample.InApp.Pages.DocumentsModel
+@{
+    ViewData["Title"] = "Documents";
+}
+
+<h1>Resource-based authorization</h1>
+<p>
+    Whether you can edit a document isn't a role or a scope — it's decided <em>per row</em>
+    against the document itself: <strong>you may edit it if you own it, or if you hold the
+    <code>Admin</code> app role.</strong> The <code>Can edit?</code> column is the actual
+    <code>IAuthorizationService.AuthorizeAsync(User, doc, "EditDocument")</code> result.
+</p>
+
+@if (Model.Flash is not null)
+{
+    <p><strong>@Model.Flash</strong></p>
+}
+
+<table>
+    <thead>
+        <tr><th>Document</th><th>Owner</th><th>You own it?</th><th>Admin override?</th><th>Can edit?</th><th></th></tr>
+    </thead>
+    <tbody>
+        @foreach (var r in Model.Rows)
+        {
+            <tr>
+                <td>@r.Doc.Title</td>
+                <td>@r.Doc.OwnerName</td>
+                <td>@(r.IsOwner ? "yes" : "—")</td>
+                <td>@(r.IsAdmin ? "yes (Admin)" : "—")</td>
+                <td>@(r.CanEdit ? "✅ allowed" : "🚫 denied")</td>
+                <td>
+                    <form method="post" asp-page-handler="Edit" asp-route-id="@r.Doc.Id">
+                        <button type="submit">Try edit</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p>
+    <small>Tip: an <code>Admin</code> can edit every row (the override). Drop the Admin
+    role to see the owner-only rule deny the rows you don't own.</small>
+</p>

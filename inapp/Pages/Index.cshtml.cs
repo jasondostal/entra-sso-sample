@@ -25,6 +25,9 @@ public class IndexModel : PageModel
     // From the ID token (who Entra says you are — no API call needed).
     public List<ClaimRow> Claims { get; } = new();
 
+    // App Roles assigned to you, surfaced from the "roles" claim — the basis of RBAC.
+    public List<string> Roles { get; } = new();
+
     public record ClaimRow(string Type, string Value);
 
     public async Task OnGetAsync()
@@ -34,6 +37,9 @@ public class IndexModel : PageModel
         {
             Claims.Add(new ClaimRow(c.Type, c.Value));
         }
+
+        // App Roles arrive in the "roles" claim (one entry per assigned role).
+        Roles.AddRange(User.FindAll("roles").Select(c => c.Value));
 
         // Now prove we can call a downstream API with an ACCESS token: GET /me.
         try

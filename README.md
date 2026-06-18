@@ -1,8 +1,15 @@
 # entra-sso-sample
 
-Two runnable, side-by-side ways to put **Microsoft Entra ID single sign-on** in
-front of a tiny ASP.NET Core web app — so you can *see* the difference between
-letting the platform do auth and doing it yourself.
+Runnable, side-by-side ways to do **Microsoft Entra ID** auth in ASP.NET Core — two
+**authentication** patterns for a web app, plus a protected-**API** template and the
+**authorization** model (RBAC + resource-based) to standardize on.
+
+- **Authentication** (who you are): [`easyauth/`](easyauth/) vs [`inapp/`](inapp/) — table below.
+- **Authorization** (what you can do): App Roles + resource-based authz, demoed live in
+  [`inapp/`](inapp/) and templated for services in [`api/`](api/). The model is written
+  up in [`docs/SECURING-APIS.md`](docs/SECURING-APIS.md).
+
+## Authentication — two patterns
 
 | | [`easyauth/`](easyauth/) | [`inapp/`](inapp/) |
 |---|---|---|
@@ -52,6 +59,24 @@ browser ──▶ your app (Microsoft.Identity.Web)
 The home page shows both the ID-token claims **and** the Graph `/me` result, so the
 whole sign-in → token → API-call chain is visible on one page. See [`inapp/`](inapp/)
 and its [`infra/`](inapp/infra/).
+
+## Authorization — RBAC + resource-based ([`inapp/`](inapp/), [`api/`](api/))
+
+Once a user is signed in, *what can they do?* This repo demonstrates the model to
+standardize on before a fleet of APIs arrives:
+
+- **App Roles** (the `roles` claim) for coarse "what kind of user" — assign **AD groups
+  to roles** so admins manage access the familiar way without your code ever touching a
+  group GUID (and you dodge the token-overage trap). Gated with policies / `[Authorize]`.
+- **Resource-based authorization** for "can you act on *this* object" — a runtime
+  decision against the resource (owner / status / tenant), which no claim can express.
+- **For APIs:** [`api/`](api/) is a JWT-validating Web API showing the thing teams get
+  wrong — **delegated scopes (`scp`) vs app-only app-roles (`roles`)** are different
+  permission models and must not be conflated — plus resource-based authz.
+
+The full reasoning (why not raw groups, the overage gotcha, nested-group caveat, the
+delegated-vs-app split, a per-API checklist) is in
+[`docs/SECURING-APIS.md`](docs/SECURING-APIS.md).
 
 ## Setup, end to end
 

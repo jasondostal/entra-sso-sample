@@ -1,0 +1,12 @@
+@page
+@model EntraSsoSample.InApp.Pages.AdminModel
+@{
+    ViewData["Title"] = "Admin";
+}
+
+<h1>Admin-only page 🔒</h1>
+<p>
+    You can see this because your token carries the <code>Admin</code> App Role. A user
+    without it gets a 403 / access-denied before this page ever runs — enforced by
+    <code>[Authorize(Policy = "RequireAdmin")]</code>, no in-page checks needed.
+</p>

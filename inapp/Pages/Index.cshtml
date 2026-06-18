@@ -12,6 +12,25 @@
     — the full OAuth2 round trip.
 </p>
 
+<h2>Your App Roles <small>(the <code>roles</code> claim — basis of RBAC)</small></h2>
+@if (Model.Roles.Count > 0)
+{
+    <ul>
+        @foreach (var role in Model.Roles)
+        {
+            <li><code>@role</code></li>
+        }
+    </ul>
+}
+else
+{
+    <p>
+        <em>No roles assigned yet. Assign yourself an App Role in the Enterprise App
+        (Users and groups), then sign in again. See the <a href="/Documents">Documents</a>
+        and <a href="/Admin">Admin</a> pages for what roles unlock.</em>
+    </p>
+}
+
 <h2>Microsoft Graph <small>(<code>GET /me</code> with an access token)</small></h2>
 @if (Model.GraphError is not null)
 {

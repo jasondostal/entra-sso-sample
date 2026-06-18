@@ -1,15 +1,15 @@
-// In-app "full Entra" sample — the authentication lives in THIS code, not the
-// platform. Contrast with ../easyauth, where App Service does the sign-in and the
-// app has zero auth code.
+// In-app "full Entra" sample — authentication AND authorization live in this code.
 //
-// What this wires up, in one fluent chain:
-//   1. AddMicrosoftIdentityWebApp ............ OpenID Connect sign-in (auth-code + PKCE)
-//   2. EnableTokenAcquisitionToCallDownstreamApi  acquire ACCESS tokens for scopes
-//   3. AddMicrosoftGraph ..................... a GraphServiceClient pre-wired with those tokens
-//   4. AddInMemoryTokenCaches ................ where the acquired tokens are cached
-// Together that's the whole OAuth2 picture EasyAuth hides: sign-in -> token -> call an API.
+// Auth (who you are):    OIDC sign-in (auth-code + PKCE) via Microsoft.Identity.Web,
+//                        plus an access token used to call Microsoft Graph GET /me.
+// Authz (what you can do): two flavors, both wired below —
+//   • ROLE-BASED      — App Roles arrive in the "roles" claim; policies gate pages.
+//   • RESOURCE-BASED  — "can you edit THIS document" is decided at runtime against
+//                        the actual object, which no static claim can express.
 
+using EntraSsoSample.InApp.Authorization;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
@@ -22,33 +22,43 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor;
-    // The proxy IP isn't known ahead of time on App Service — trust the forwarded headers.
     o.KnownIPNetworks.Clear();
     o.KnownProxies.Clear();
 });
 
 builder.Services
     .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    // Sign users in with Entra. Reads the "AzureAd" config section
-    // (Instance / TenantId / ClientId / ClientSecret / callback paths).
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
-    // On top of sign-in, also acquire access tokens for downstream APIs.
-    // The initial scope is consented at sign-in; more can be added incrementally.
+    .AddMicrosoftIdentityWebApp(options =>
+    {
+        builder.Configuration.GetSection("AzureAd").Bind(options);
+        // Entra delivers App Role *values* in the "roles" claim. Tell ASP.NET Core to
+        // treat that as the role claim so [Authorize(Roles=...)] and User.IsInRole() work.
+        options.TokenValidationParameters.RoleClaimType = "roles";
+    })
     .EnableTokenAcquisitionToCallDownstreamApi(["User.Read"])
-    // Hand us a GraphServiceClient that automatically attaches those tokens.
-    // Reads the "MicrosoftGraph" config section (BaseUrl + Scopes).
     .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
-    // Tokens have to live somewhere. In-memory is fine for a sample / single instance;
-    // use a distributed cache (Redis, etc.) for real multi-instance apps.
     .AddInMemoryTokenCaches();
 
-// Require a signed-in user for every page by default — no [Authorize] sprinkling.
 builder.Services.AddAuthorization(options =>
 {
+    // Require a signed-in user for every page by default.
     options.FallbackPolicy = options.DefaultPolicy;
+
+    // ── Role-based policies (App Roles → "roles" claim) ──────────────────────────
+    // Note Approver is satisfied by Admin too — roles aren't a strict hierarchy unless
+    // you make them one, so list every role that should pass.
+    options.AddPolicy("RequireAdmin", p => p.RequireRole("Admin"));
+    options.AddPolicy("RequireApprover", p => p.RequireRole("Approver", "Admin"));
+
+    // ── Resource-based policy ────────────────────────────────────────────────────
+    // No claim can answer "can you edit THIS row" — the handler decides at runtime
+    // against the specific Document passed to IAuthorizationService.AuthorizeAsync.
+    options.AddPolicy("EditDocument", p => p.AddRequirements(new SameOwnerOrAdminRequirement()));
 });
 
-// Razor Pages + the built-in sign-in/sign-out UI (/MicrosoftIdentity/Account/...).
+// The handler that evaluates EditDocument against a specific Document instance.
+builder.Services.AddSingleton<IAuthorizationHandler, DocumentAuthorizationHandler>();
+
 builder.Services
     .AddRazorPages()
     .AddMicrosoftIdentityUI();

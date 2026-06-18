@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>EntraSsoSample.Api</RootNamespace>
+    <UserSecretsId>entra-sso-sample-api</UserSecretsId>
+  </PropertyGroup>
+
+  <!-- A protected Web API validates incoming access tokens — no sign-in UI, no Graph. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.10.0" />
+  </ItemGroup>
+
+</Project>

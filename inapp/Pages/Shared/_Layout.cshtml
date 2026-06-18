@@ -6,7 +6,8 @@
     <title>@ViewData["Title"] - Entra In-App Sample</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: .75rem; }
+        header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-bottom: 1px solid #ddd; padding-bottom: .75rem; flex-wrap: wrap; }
+        nav { display: flex; gap: .75rem; align-items: center; }
         a.btn { text-decoration: none; background: #0078D4; color: #fff; padding: .4rem .8rem; border-radius: 6px; }
         table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
         td, th { border: 1px solid #e0e0e0; padding: .35rem .6rem; text-align: left; font-size: .9rem; vertical-align: top; }
@@ -18,6 +19,9 @@
     <header>
         <strong>Entra In-App (OIDC) Sample</strong>
         <nav>
+            <a href="/">Home</a>
+            <a href="/Documents">Documents</a>
+            <a href="/Admin">Admin</a>
             @* Microsoft.Identity.Web.UI provides these endpoints — no app code needed. *@
             <span>@User.Identity?.Name</span>
             <a class="btn" href="/MicrosoftIdentity/Account/SignOut">Sign out</a>

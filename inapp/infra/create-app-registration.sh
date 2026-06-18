@@ -37,6 +37,22 @@ APP_ID=$(az ad app create \
   --query appId -o tsv)
 echo "   clientId=${APP_ID}"
 
+echo ">> Defining App Roles (Reader / Approver / Admin) for RBAC"
+# These appear in the "roles" claim and back the RequireAdmin/RequireApprover policies.
+# Assign users (or AD groups) to them in: Enterprise App > Users and groups.
+OBJ_ID=$(az ad app show --id "${APP_ID}" --query id -o tsv)
+uuid() { python3 -c 'import uuid;print(uuid.uuid4())'; }
+ROLES_BODY=$(cat <<JSON
+{ "appRoles": [
+  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Reader",   "displayName": "Reader",   "description": "Read-only access." },
+  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Approver", "displayName": "Approver", "description": "Can approve." },
+  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Admin",    "displayName": "Admin",    "description": "Full administrative access." }
+] }
+JSON
+)
+az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/${OBJ_ID}" \
+  --headers "Content-Type=application/json" --body "${ROLES_BODY}"
+
 echo ">> Creating a service principal (enterprise app) for it"
 az ad sp create --id "${APP_ID}" -o none
 
@@ -61,6 +77,9 @@ App registration ready. Feed these into main.bicep / main.bicepparam:
 
 Redirect URI registered:
   - ${REDIRECT}
+
+App Roles defined: Reader, Approver, Admin. Assign yourself one in the portal
+(Enterprise App > Users and groups) and sign in again to get the "roles" claim.
 
 Microsoft Graph User.Read (delegated) is requested. It's a user-consent scope,
 so each user consents on first sign-in — no admin consent required.

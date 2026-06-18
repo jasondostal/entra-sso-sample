@@ -1,3 +1,4 @@
+using EntraSsoSample.InApp.Authorization;
 using EntraSsoSample.InApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,8 +7,10 @@ using Microsoft.Identity.Web;
 
 namespace EntraSsoSample.InApp.Pages;
 
-// Demonstrates RESOURCE-BASED authorization: the same user is allowed to edit some
-// documents and not others, decided per-row against the actual Document.
+// RESOURCE-BASED authorization + how roles feed into it:
+//   • Read an item  → owner, Auditor (read-all), or Admin
+//   • Edit an item  → owner or Admin
+//   • Create a draft → needs the Contributor role (a plain role check)
 public class DocumentsModel : PageModel
 {
     private readonly IAuthorizationService _authz;
@@ -17,13 +20,10 @@ public class DocumentsModel : PageModel
     public List<Row> Rows { get; } = new();
     public string? Flash { get; private set; }
 
-    // CanEdit is the real authorization decision; IsOwner / IsAdmin are shown only to
-    // make the "why" visible on the page.
-    public record Row(Document Doc, bool IsOwner, bool IsAdmin, bool CanEdit);
+    public record Row(Document Doc, bool IsOwner, bool CanRead, bool CanEdit);
 
-    // In a real app these come from a store. We seed one doc owned by the current user
-    // (so owner-match is demonstrable) and two owned by other people.
-    private List<Document> SeedDocuments()
+    // One doc owned by the current user, two owned by other people.
+    private List<Document> Seed()
     {
         var myOid = User.GetObjectId() ?? "you";
         var myName = User.Identity?.Name ?? "you";
@@ -39,22 +39,26 @@ public class DocumentsModel : PageModel
 
     public async Task<IActionResult> OnPostEditAsync(int id)
     {
-        var doc = SeedDocuments().FirstOrDefault(d => d.Id == id);
+        var doc = Seed().FirstOrDefault(d => d.Id == id);
         if (doc is null) return NotFound();
 
-        // The REAL enforcement. Never trust the button's enabled/disabled state — the
-        // server re-checks the resource-based policy on every mutating request.
-        var result = await _authz.AuthorizeAsync(User, doc, "EditDocument");
-        if (!result.Succeeded)
-        {
-            // Production APIs return Forbid() (403). We render a message so the demo
-            // stays on one page instead of redirecting to an access-denied screen.
-            Flash = $"❌ Denied — you may not edit \"{doc.Title}\".";
-        }
-        else
-        {
-            Flash = $"✅ Authorized — you edited \"{doc.Title}\".";
-        }
+        // The real enforcement — re-checked server-side on every mutation.
+        var result = await _authz.AuthorizeAsync(User, doc, DocumentOperations.Edit);
+        Flash = result.Succeeded
+            ? $"✅ Authorized — you edited \"{doc.Title}\"."
+            : $"❌ Denied — you can't edit \"{doc.Title}\" (you're not the owner or an Admin).";
+
+        await BuildRowsAsync();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostCreateAsync()
+    {
+        // A plain role check (no resource): creating needs the Contributor role.
+        var result = await _authz.AuthorizeAsync(User, "RequireContributor");
+        Flash = result.Succeeded
+            ? "✅ Draft created (you hold the Contributor role)."
+            : "❌ Denied — creating a draft needs the Contributor role.";
 
         await BuildRowsAsync();
         return Page();
@@ -63,12 +67,12 @@ public class DocumentsModel : PageModel
     private async Task BuildRowsAsync()
     {
         Rows.Clear();
-        var isAdmin = User.IsInRole("Admin");
         var myOid = User.GetObjectId();
-        foreach (var doc in SeedDocuments())
+        foreach (var doc in Seed())
         {
-            var decision = await _authz.AuthorizeAsync(User, doc, "EditDocument");
-            Rows.Add(new Row(doc, myOid == doc.OwnerObjectId, isAdmin, decision.Succeeded));
+            var canRead = (await _authz.AuthorizeAsync(User, doc, DocumentOperations.Read)).Succeeded;
+            var canEdit = (await _authz.AuthorizeAsync(User, doc, DocumentOperations.Edit)).Succeeded;
+            Rows.Add(new Row(doc, myOid == doc.OwnerObjectId, canRead, canEdit));
         }
     }
 }

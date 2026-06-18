@@ -6,10 +6,17 @@
 
 <h1>Resource-based authorization</h1>
 <p>
-    Whether you can edit a document isn't a role or a scope — it's decided <em>per row</em>
-    against the document itself: <strong>you may edit it if you own it, or if you hold the
-    <code>Admin</code> app role.</strong> The <code>Can edit?</code> column is the actual
-    <code>IAuthorizationService.AuthorizeAsync(User, doc, "EditDocument")</code> result.
+    Access here isn't a single role — it's decided <em>per item, per operation</em> against
+    the document itself:
+</p>
+<ul>
+    <li><strong>Read</strong> — the <em>owner</em>, an <strong>Auditor</strong> (read-all), or an <strong>Admin</strong>.</li>
+    <li><strong>Edit</strong> — the <em>owner</em> or an <strong>Admin</strong>.</li>
+    <li><strong>Create</strong> a draft — needs the <strong>Contributor</strong> role.</li>
+</ul>
+<p>
+    The <code>Read?</code> / <code>Edit?</code> columns are the actual
+    <code>AuthorizeAsync(User, doc, DocumentOperations.*)</code> results.
 </p>
 
 @if (Model.Flash is not null)
@@ -17,9 +24,13 @@
     <p><strong>@Model.Flash</strong></p>
 }
 
+<form method="post" asp-page-handler="Create" style="margin: .5rem 0;">
+    <button type="submit">+ Create draft (Contributor)</button>
+</form>
+
 <table>
     <thead>
-        <tr><th>Document</th><th>Owner</th><th>You own it?</th><th>Admin override?</th><th>Can edit?</th><th></th></tr>
+        <tr><th>Document</th><th>Owner</th><th>You own it?</th><th>Read?</th><th>Edit?</th><th></th></tr>
     </thead>
     <tbody>
         @foreach (var r in Model.Rows)
@@ -28,8 +39,8 @@
                 <td>@r.Doc.Title</td>
                 <td>@r.Doc.OwnerName</td>
                 <td>@(r.IsOwner ? "yes" : "—")</td>
-                <td>@(r.IsAdmin ? "yes (Admin)" : "—")</td>
-                <td>@(r.CanEdit ? "✅ allowed" : "🚫 denied")</td>
+                <td>@(r.CanRead ? "✅" : "🚫")</td>
+                <td>@(r.CanEdit ? "✅" : "🚫")</td>
                 <td>
                     <form method="post" asp-page-handler="Edit" asp-route-id="@r.Doc.Id">
                         <button type="submit">Try edit</button>
@@ -41,6 +52,6 @@
 </table>
 
 <p>
-    <small>Tip: an <code>Admin</code> can edit every row (the override). Drop the Admin
-    role to see the owner-only rule deny the rows you don't own.</small>
+    <small>As an <strong>Auditor</strong> you can read every row but only edit your own —
+    that's the role feeding a resource decision. An <strong>Admin</strong> can edit them all.</small>
 </p>

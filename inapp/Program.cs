@@ -28,13 +28,17 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 
 builder.Services
     .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(options =>
-    {
-        builder.Configuration.GetSection("AzureAd").Bind(options);
-        // Entra delivers App Role *values* in the "roles" claim. Tell ASP.NET Core to
-        // treat that as the role claim so [Authorize(Roles=...)] and User.IsInRole() work.
-        options.TokenValidationParameters.RoleClaimType = "roles";
-    })
+    .AddMicrosoftIdentityWebApp(
+        options =>
+        {
+            builder.Configuration.GetSection("AzureAd").Bind(options);
+            // Entra delivers App Role *values* in the "roles" claim. Tell ASP.NET Core to
+            // treat that as the role claim so [Authorize(Roles=...)] and User.IsInRole() work.
+            options.TokenValidationParameters.RoleClaimType = "roles";
+        },
+        // When a signed-in user lacks the required role, show a friendly page (403)
+        // instead of the framework default path.
+        cookieOptions => cookieOptions.AccessDeniedPath = "/AccessDenied")
     .EnableTokenAcquisitionToCallDownstreamApi(["User.Read"])
     .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
     .AddInMemoryTokenCaches();
@@ -45,18 +49,18 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = options.DefaultPolicy;
 
     // ── Role-based policies (App Roles → "roles" claim) ──────────────────────────
-    // Note Approver is satisfied by Admin too — roles aren't a strict hierarchy unless
-    // you make them one, so list every role that should pass.
-    options.AddPolicy("RequireAdmin", p => p.RequireRole("Admin"));
-    options.AddPolicy("RequireApprover", p => p.RequireRole("Approver", "Admin"));
+    // Admin is listed in every policy because roles aren't a strict hierarchy unless
+    // you make them one — so an Admin satisfies the lower policies explicitly.
+    options.AddPolicy("RequireAdmin", p => p.RequireRole(Roles.Admin));
+    options.AddPolicy("RequireApprover", p => p.RequireRole(Roles.Approver, Roles.Admin));
+    options.AddPolicy("RequireAuditor", p => p.RequireRole(Roles.Auditor, Roles.Admin));
+    options.AddPolicy("RequireContributor", p => p.RequireRole(Roles.Contributor, Roles.Admin));
 
-    // ── Resource-based policy ────────────────────────────────────────────────────
-    // No claim can answer "can you edit THIS row" — the handler decides at runtime
-    // against the specific Document passed to IAuthorizationService.AuthorizeAsync.
-    options.AddPolicy("EditDocument", p => p.AddRequirements(new SameOwnerOrAdminRequirement()));
+    // Resource-based decisions don't get a named policy here — they're checked against a
+    // specific Document via DocumentOperations.Read/Edit (see DocumentAuthorizationHandler).
 });
 
-// The handler that evaluates EditDocument against a specific Document instance.
+// The handler that evaluates DocumentOperations against a specific Document instance.
 builder.Services.AddSingleton<IAuthorizationHandler, DocumentAuthorizationHandler>();
 
 builder.Services

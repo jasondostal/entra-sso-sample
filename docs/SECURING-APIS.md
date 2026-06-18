@@ -110,6 +110,10 @@ claim-type config, a resource-based base handler) plus a project template that w
 `AddMicrosoftIdentityWebApi`, the `FallbackPolicy`, and the standard policies out of the
 box. New API = inherit the baseline, define its scopes/roles/resource rules, done.
 
+The phased plan to fold this into the Azure platform cascade (`azure-project-starter`
+archetypes + the Secure Coding Platform gates), including the AD-group-to-role
+assignment automation, is tracked in [`ROADMAP.md`](ROADMAP.md).
+
 ## Checklist for a new API
 
 - [ ] `AddMicrosoftIdentityWebApi`; `FallbackPolicy` requires an authenticated caller (fail safe).

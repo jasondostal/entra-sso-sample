@@ -44,9 +44,11 @@ OBJ_ID=$(az ad app show --id "${APP_ID}" --query id -o tsv)
 uuid() { python3 -c 'import uuid;print(uuid.uuid4())'; }
 ROLES_BODY=$(cat <<JSON
 { "appRoles": [
-  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Reader",   "displayName": "Reader",   "description": "Read-only access." },
-  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Approver", "displayName": "Approver", "description": "Can approve." },
-  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Admin",    "displayName": "Admin",    "description": "Full administrative access." }
+  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Reader",      "displayName": "Reader",      "description": "Baseline read-only access." },
+  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Contributor", "displayName": "Contributor", "description": "Create and edit your own items." },
+  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Approver",    "displayName": "Approver",    "description": "Approve pending items." },
+  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Auditor",     "displayName": "Auditor",     "description": "Read everything, including others' items." },
+  { "id": "$(uuid)", "isEnabled": true, "allowedMemberTypes": ["User"], "value": "Admin",       "displayName": "Admin",       "description": "Full administrative access." }
 ] }
 JSON
 )
@@ -78,8 +80,9 @@ App registration ready. Feed these into main.bicep / main.bicepparam:
 Redirect URI registered:
   - ${REDIRECT}
 
-App Roles defined: Reader, Approver, Admin. Assign yourself one in the portal
-(Enterprise App > Users and groups) and sign in again to get the "roles" claim.
+App Roles defined: Reader, Contributor, Approver, Auditor, Admin. Assign yourself
+(or an AD group) one or more in the portal (Enterprise App > Users and groups) and
+sign in again to get the "roles" claim.
 
 Microsoft Graph User.Read (delegated) is requested. It's a user-consent scope,
 so each user consents on first sign-in — no admin consent required.

@@ -1,0 +1,28 @@
+@page
+@model EntraSsoSample.InApp.Pages.ApprovalsModel
+@{
+    ViewData["Title"] = "Approvals";
+}
+
+<h1>Approvals 🗳️</h1>
+<p>
+    You can see this page because you hold the <code>Approver</code> (or <code>Admin</code>)
+    App Role — gated by <code>[Authorize(Policy = "RequireApprover")]</code>.
+</p>
+
+@if (Model.Flash is not null)
+{
+    <p><strong>@Model.Flash</strong></p>
+}
+
+<ul>
+    @foreach (var item in Model.Pending)
+    {
+        <li>
+            @item
+            <form method="post" asp-page-handler="Approve" asp-route-item="@item" style="display:inline;">
+                <button type="submit">Approve</button>
+            </form>
+        </li>
+    }
+</ul>

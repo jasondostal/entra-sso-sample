@@ -76,7 +76,14 @@ standardize on before a fleet of APIs arrives:
 
 The full reasoning (why not raw groups, the overage gotcha, nested-group caveat, the
 delegated-vs-app split, a per-API checklist) is in
-[`docs/SECURING-APIS.md`](docs/SECURING-APIS.md).
+[`docs/SECURING-APIS.md`](docs/SECURING-APIS.md). The plan to make this the platform
+default (shared library + archetype wiring + group-assignment automation + CI gates)
+is in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+The web demo defines five App Roles — `Reader`, `Contributor`, `Approver`, `Auditor`,
+`Admin` — in one place ([`inapp/Authorization/Roles.cs`](inapp/Authorization/Roles.cs))
+to customize; assign them (or AD groups) per user to watch pages and per-row actions
+grant and deny.
 
 ## Setup, end to end
 

@@ -1,11 +1,33 @@
 # entra-sso-sample
 
-A minimal, runnable example of **Microsoft Entra ID single sign-on for a web app using App Service EasyAuth** — the platform/no-code approach. App Service runs the Entra sign-in *in front of* the app; the app contains **zero authentication code** and just reads the identity the platform injects.
+Two runnable, side-by-side ways to put **Microsoft Entra ID single sign-on** in
+front of a tiny ASP.NET Core web app — so you can *see* the difference between
+letting the platform do auth and doing it yourself.
 
-> This is the **EasyAuth** pattern. The alternative is in-app auth with
-> `Microsoft.Identity.Web` (OpenID Connect in your own code) — not covered here.
+| | [`easyauth/`](easyauth/) | [`inapp/`](inapp/) |
+|---|---|---|
+| **Who signs the user in** | App Service "Authentication" (EasyAuth), *in front of* the app | The app itself (`Microsoft.Identity.Web`) |
+| **Auth code in the app** | **None** — reads `X-MS-CLIENT-PRINCIPAL-*` headers | OpenID Connect wired in `Program.cs` |
+| **NuGet packages** | none | `Microsoft.Identity.Web` (+ `.UI`, `.GraphServiceClient`) |
+| **What you get to see** | the injected identity headers + claims | the **full OAuth2 round trip**: sign-in → access token → call Microsoft Graph |
+| **Runs locally?** | no (EasyAuth only exists on App Service) | **yes** — full flow against your real tenant from `localhost` |
+| **Downstream API calls** | not without extra work | **yes** — `GET /me` on Microsoft Graph with an access token |
+| **Hosting** | F1 (Free) | F1 (Free), or localhost for $0 |
 
-## How EasyAuth works
+Both are protected by the same Entra tenant. EasyAuth is the no-code, fastest path;
+the in-app variant is the one to **play with** when you want to understand tokens,
+scopes, consent, and calling downstream APIs — the machinery EasyAuth hides.
+
+## Cost (the short version)
+
+For workforce sign-in in your own tenant, **"full Entra" is essentially free**:
+app registrations, OIDC sign-ins, token issuance, and Microsoft Graph calls are all
+**Entra ID Free**, and both samples run on **F1 (Free)** App Service. The cheapest
+way to explore the complete in-app flow is to run it on **localhost** against your
+real tenant — $0 of Azure compute. Full breakdown (and the secret-vs-federated
+trade-off) in [`docs/COST.md`](docs/COST.md).
+
+## EasyAuth pattern — [`easyauth/`](easyauth/)
 
 ```
 browser ──▶ App Service "Authentication" ──▶ your app
@@ -14,44 +36,27 @@ browser ──▶ App Service "Authentication" ──▶ your app
               └──────────────────────────────────┘
 ```
 
-1. An unauthenticated request hits App Service; EasyAuth redirects it to Entra to sign in.
-2. After sign-in, EasyAuth forwards the request to the app with the user attached as
-   request headers (`X-MS-CLIENT-PRINCIPAL-NAME`, `X-MS-CLIENT-PRINCIPAL-ID`, and the
-   full base64 `X-MS-CLIENT-PRINCIPAL` claims blob).
-3. The app reads those headers. No auth libraries, no token handling, no secrets in code.
+The app has **zero** authentication code; its home page just dumps the identity
+headers EasyAuth injects. See [`easyauth/`](easyauth/) and its
+[`infra/`](easyauth/infra/).
 
-## The app
+## In-app pattern — [`inapp/`](inapp/)
 
-A tiny Razor Pages app whose home page **dumps the EasyAuth identity headers and
-claims** — a clean way to *see* EasyAuth working. The entire app:
+```
+browser ──▶ your app (Microsoft.Identity.Web)
+              │  1. redirects to Entra, signs the user in (auth-code + PKCE)
+              │  2. acquires an ACCESS token for scope User.Read
+              └▶ 3. calls Microsoft Graph GET /me with that token
+```
 
-- `Program.cs` — a plain web app. No authentication code, no auth NuGet packages.
-- `Pages/Index.cshtml.cs` — reads `X-MS-CLIENT-PRINCIPAL-*` and decodes the claims.
-- Sign-out is the built-in `/.auth/logout` endpoint (no app code or routes).
+The home page shows both the ID-token claims **and** the Graph `/me` result, so the
+whole sign-in → token → API-call chain is visible on one page. See [`inapp/`](inapp/)
+and its [`infra/`](inapp/infra/).
 
 ## Setup, end to end
 
-1. **Register the app in Entra** + set the redirect URI + create a client secret —
-   full walkthrough in [`docs/ENTRA-SETUP.md`](docs/ENTRA-SETUP.md), or one command
-   via [`infra/create-app-registration.sh`](infra/create-app-registration.sh).
-   The EasyAuth redirect URI is `https://<host>/.auth/login/aad/callback`.
-2. **Deploy** the App Service + EasyAuth config with [`infra/main.bicep`](infra/main.bicep)
-   (see [`infra/README.md`](infra/README.md)).
-3. **Deploy the app code** (e.g. `az webapp deploy`), browse to the URL, and you'll be
-   bounced to Entra to sign in, then back to the claims page.
-
-## Running locally
-
-EasyAuth only exists on App Service, so locally there are no identity headers —
-`dotnet run` works but the home page will say "no EasyAuth headers found." That's
-expected; the auth only kicks in once deployed behind App Service.
-
-## Infrastructure-as-code
-
-The [`infra/`](infra/) folder has the matching IaC:
-- `create-app-registration.sh` — the Entra app registration + redirect URI + secret
-  (an `az` script, because **Bicep can't create app registrations**).
-- `main.bicep` — App Service plan + web app + the EasyAuth `authsettingsV2` config +
-  the client-secret app setting it references. One deploy, fully protected.
-
-Bicep validated with `az bicep build`. See [`infra/README.md`](infra/README.md).
+Entra app registration walkthrough (shared concepts) lives in
+[`docs/ENTRA-SETUP.md`](docs/ENTRA-SETUP.md). Each variant's `infra/README.md` has
+its exact `create-app-registration.sh` + Bicep deploy steps — the two differ in
+redirect URI (`/.auth/login/aad/callback` vs `/signin-oidc`) and in whether they
+request Graph `User.Read`.

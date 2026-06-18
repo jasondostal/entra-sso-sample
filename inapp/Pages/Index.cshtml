@@ -1,0 +1,40 @@
+@page
+@model EntraSsoSample.InApp.Pages.IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<h1>Signed in via in-app Entra (OpenID Connect) 🎉</h1>
+<p>
+    Unlike the EasyAuth sample, the sign-in here happens in <strong>this app's code</strong>
+    (<code>Microsoft.Identity.Web</code>). Below: who the <strong>ID token</strong> says you are,
+    and the result of calling <strong>Microsoft Graph</strong> with an <strong>access token</strong>
+    — the full OAuth2 round trip.
+</p>
+
+<h2>Microsoft Graph <small>(<code>GET /me</code> with an access token)</small></h2>
+@if (Model.GraphError is not null)
+{
+    <p><em>Graph call failed: @Model.GraphError</em></p>
+}
+else
+{
+    <ul>
+        <li><strong>Display name:</strong> @Model.GraphDisplayName</li>
+        <li><strong>User principal name:</strong> @Model.GraphUpn</li>
+        <li><strong>Job title:</strong> @(string.IsNullOrEmpty(Model.GraphJobTitle) ? "—" : Model.GraphJobTitle)</li>
+    </ul>
+}
+
+<h2>ID-token claims <small>(no API call — straight off the sign-in)</small></h2>
+<table>
+    <thead>
+        <tr><th>Claim type</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model.Claims)
+        {
+            <tr><td><code>@c.Type</code></td><td>@c.Value</td></tr>
+        }
+    </tbody>
+</table>

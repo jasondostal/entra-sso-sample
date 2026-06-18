@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- csproj renamed to EasyAuth.csproj; pin the namespace the code already uses. -->
+    <RootNamespace>EntraSsoSample</RootNamespace>
   </PropertyGroup>
 
   <!-- No auth packages: sign-in is handled by App Service EasyAuth, not the app. -->
